@@ -1,5 +1,6 @@
 import assert from 'assert'
 import {Chain, ChainContext, EventContext, Event, Result, Option} from './support'
+import * as v1225 from './v1225'
 
 export class PhalaComputationBenchmarkUpdatedEvent {
     private readonly _chain: Chain
@@ -138,41 +139,6 @@ export class PhalaComputationSessionUnboundEvent {
      * - [`WorkerBindings`] for the worker is removed
      */
     get asV1225(): {session: Uint8Array, worker: Uint8Array} {
-        assert(this.isV1225)
-        return this._chain.decodeEvent(this.event)
-    }
-}
-
-export class PhalaComputationTokenomicParametersChangedEvent {
-    private readonly _chain: Chain
-    private readonly event: Event
-
-    constructor(ctx: EventContext)
-    constructor(ctx: ChainContext, event: Event)
-    constructor(ctx: EventContext, event?: Event) {
-        event = event || ctx.event
-        assert(event.name === 'PhalaComputation.TokenomicParametersChanged')
-        this._chain = ctx._chain
-        this.event = event
-    }
-
-    /**
-     * Tokenomic parameter changed.
-     * 
-     * Affected states:
-     * - [`TokenomicParameters`] is updated.
-     */
-    get isV1225(): boolean {
-        return this._chain.getEventHash('PhalaComputation.TokenomicParametersChanged') === '01f2f9c28aa1d4d36a81ff042620b6677d25bf07c2bf4acc37b58658778a4fca'
-    }
-
-    /**
-     * Tokenomic parameter changed.
-     * 
-     * Affected states:
-     * - [`TokenomicParameters`] is updated.
-     */
-    get asV1225(): null {
         assert(this.isV1225)
         return this._chain.decodeEvent(this.event)
     }
@@ -350,6 +316,75 @@ export class PhalaComputationWorkerStoppedEvent {
      * - [`OnlineWorkers`] is decremented
      */
     get asV1225(): {session: Uint8Array} {
+        assert(this.isV1225)
+        return this._chain.decodeEvent(this.event)
+    }
+}
+
+export class PhalaRegistryInitialScoreSetEvent {
+    private readonly _chain: Chain
+    private readonly event: Event
+
+    constructor(ctx: EventContext)
+    constructor(ctx: ChainContext, event: Event)
+    constructor(ctx: EventContext, event?: Event) {
+        event = event || ctx.event
+        assert(event.name === 'PhalaRegistry.InitialScoreSet')
+        this._chain = ctx._chain
+        this.event = event
+    }
+
+    get isV1225(): boolean {
+        return this._chain.getEventHash('PhalaRegistry.InitialScoreSet') === '9178da6c60711edb6a539f26f333d754493f4e28ed8719c2f7892f1fe44e9b03'
+    }
+
+    get asV1225(): {pubkey: Uint8Array, initScore: number} {
+        assert(this.isV1225)
+        return this._chain.decodeEvent(this.event)
+    }
+}
+
+export class PhalaRegistryWorkerAddedEvent {
+    private readonly _chain: Chain
+    private readonly event: Event
+
+    constructor(ctx: EventContext)
+    constructor(ctx: ChainContext, event: Event)
+    constructor(ctx: EventContext, event?: Event) {
+        event = event || ctx.event
+        assert(event.name === 'PhalaRegistry.WorkerAdded')
+        this._chain = ctx._chain
+        this.event = event
+    }
+
+    get isV1225(): boolean {
+        return this._chain.getEventHash('PhalaRegistry.WorkerAdded') === '62aabfc3b7ad514db79224f111b8a77d10eec5bfb10570491e4ae9114115d90c'
+    }
+
+    get asV1225(): {pubkey: Uint8Array, attestationProvider: (v1225.AttestationProvider | undefined), confidenceLevel: number} {
+        assert(this.isV1225)
+        return this._chain.decodeEvent(this.event)
+    }
+}
+
+export class PhalaRegistryWorkerUpdatedEvent {
+    private readonly _chain: Chain
+    private readonly event: Event
+
+    constructor(ctx: EventContext)
+    constructor(ctx: ChainContext, event: Event)
+    constructor(ctx: EventContext, event?: Event) {
+        event = event || ctx.event
+        assert(event.name === 'PhalaRegistry.WorkerUpdated')
+        this._chain = ctx._chain
+        this.event = event
+    }
+
+    get isV1225(): boolean {
+        return this._chain.getEventHash('PhalaRegistry.WorkerUpdated') === '62aabfc3b7ad514db79224f111b8a77d10eec5bfb10570491e4ae9114115d90c'
+    }
+
+    get asV1225(): {pubkey: Uint8Array, attestationProvider: (v1225.AttestationProvider | undefined), confidenceLevel: number} {
         assert(this.isV1225)
         return this._chain.decodeEvent(this.event)
     }

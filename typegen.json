@@ -1,6 +1,6 @@
 {
   "outDir": "src/types",
-  "specVersions": "http://10.86.1.5:9003/graphql",
+  "specVersions": "http://54.39.243.230:9003/graphql",
   "events": [
     "PhalaComputation.WorkerStarted",
     "PhalaComputation.WorkerStopped",
@@ -11,7 +11,10 @@
     "PhalaComputation.WorkerExitUnresponsive",
     "PhalaComputation.SessionSettled",
     "PhalaComputation.BenchmarkUpdated",
-    "PhalaComputation.TokenomicParametersChanged"
+
+    "PhalaRegistry.WorkerAdded",
+    "PhalaRegistry.WorkerUpdated",
+    "PhalaRegistry.InitialScoreSet"
   ],
   "calls": [],
   "storage": []
