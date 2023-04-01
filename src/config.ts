@@ -8,7 +8,7 @@ const config: {
   blockRange: Exclude<BlockRangeOption['range'], undefined>
 } = {
   blockRange: {from: 2},
-  dataSource: {archive: 'http://54.39.243.230:9003/graphql'},
+  dataSource: {archive: 'http://54.39.243.230:9005/graphql'},
 }
 
 export default config
