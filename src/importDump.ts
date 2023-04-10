@@ -1,7 +1,4 @@
 import {BigDecimal} from '@subsquid/big-decimal'
-import {readFile} from 'fs/promises'
-import path from 'path'
-import config from './config'
 import {GlobalState, Session, Worker, WorkerState} from './model'
 import {type Ctx} from './processor'
 import {assertGet, fromBits, toBalance} from './utils'
@@ -30,12 +27,9 @@ interface Dump {
 }
 
 const importDump = async (ctx: Ctx): Promise<void> => {
-  const fromHeight = config.blockRange.from
-  const dumpFile = await readFile(
-    path.join(__dirname, `../dump/khala_${fromHeight - 1}.json`),
-    'utf8'
-  )
-  const dump = JSON.parse(dumpFile) as Dump
+  const dump = await fetch(
+    'https://raw.githubusercontent.com/Phala-Network/computation-squid-lite/main/dump/khala_3670130.json'
+  ).then(async (res) => (await res.json()) as Dump)
   const globalState = new GlobalState({
     id: '0',
     idleWorkerShares: BigDecimal(0),
