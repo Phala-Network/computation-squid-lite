@@ -6,6 +6,7 @@ import {GlobalState, Session, Worker, WorkerState} from './model'
 import {type Ctx} from './processor'
 import {assertGet, fromBits, toBalance} from './utils'
 import {updateWorkerShares} from './worker'
+import fetch from 'node-fetch'
 
 interface Dump {
   timestamp: number
@@ -31,7 +32,7 @@ interface Dump {
 const importDump = async (ctx: Ctx): Promise<void> => {
   const fromHeight = config.blockRange.from
   const dumpFile = await readFile(
-    path.join(__dirname, `../assets/dump_lite_${fromHeight - 1}.json`),
+    path.join(__dirname, `../dump/khala_${fromHeight - 1}.json`),
     'utf8'
   )
   const dump = JSON.parse(dumpFile) as Dump

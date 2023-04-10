@@ -17,7 +17,7 @@ export function updateWorkerShares(
   worker: Worker,
   session: Session
 ): asserts worker is Worker & {shares: BigDecimal} {
-  const {v, pInstant} = session
+  const {v, pInstant, pInit} = session
   const {confidenceLevel} = worker
   if (validateConfidenceLevel(confidenceLevel)) {
     const confidenceScore = confidenceScoreMap[confidenceLevel]

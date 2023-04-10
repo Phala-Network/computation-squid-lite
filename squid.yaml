@@ -1,11 +1,11 @@
 manifestVersion: subsquid.io/v0.1
-name: computation-squid-lite
+name: khala-computation-lite
 version: 1
-description: 'The very first squid from manifest  '
-build: 
+description: 'Khala computation lite'
+build:
 deploy:
   addons:
-    postgres: 
+    postgres:
   processor:
     cmd:
       - node
