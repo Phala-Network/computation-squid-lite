@@ -1,7 +1,7 @@
 import {BigDecimal} from '@subsquid/big-decimal'
 import {
-  BatchContext,
   BatchProcessorItem,
+  DataHandlerContext,
   SubstrateBatchProcessor,
   toHex,
 } from '@subsquid/substrate-processor'
@@ -51,7 +51,7 @@ const processor = new SubstrateBatchProcessor()
   .addEvent('PhalaRegistry.InitialScoreSet')
 
 type Item = BatchProcessorItem<typeof processor>
-export type Ctx = BatchContext<Store, Item>
+export type Ctx = DataHandlerContext<Store, Item>
 
 processor.run(new TypeormDatabase(), async (ctx) => {
   if ((await ctx.store.get(GlobalState, '0')) == null) {
@@ -250,6 +250,19 @@ processor.run(new TypeormDatabase(), async (ctx) => {
           break
         }
       }
+    }
+  }
+
+  let workerCount = 0
+  let idleWorkerPInstant = 0
+  let idleWorkerCount = 0
+  for (const [, session] of sessionMap) {
+    if (session.state === WorkerState.WorkerIdle) {
+      idleWorkerPInstant += session.pInstant
+      idleWorkerCount += 1
+    }
+    if (session.isBound) {
+      workerCount += 1
     }
   }
 

@@ -2,6 +2,9 @@ type GlobalState @entity {
   "constant 0"
   id: ID!
   idleWorkerShares: BigDecimal!
+  idleWorkerPInstant: Int!
+  workerCount: Int!
+  idleWorkerCount: Int!
 }
 
 type Worker @entity {

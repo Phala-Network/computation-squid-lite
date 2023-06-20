@@ -28,11 +28,14 @@ interface Dump {
 
 const importDump = async (ctx: Ctx): Promise<void> => {
   const dump = await fetch(
-    'https://raw.githubusercontent.com/Phala-Network/computation-squid-lite/main/dump/khala_3670130.json'
+    'https://raw.githubusercontent.com/Phala-Network/computation-squid-lite/main/dump/khala_4000000.json'
   ).then(async (res) => (await res.json()) as Dump)
   const globalState = new GlobalState({
     id: '0',
     idleWorkerShares: BigDecimal(0),
+    idleWorkerCount: 0,
+    idleWorkerPInstant: 0,
+    workerCount: 0,
   })
   const workerMap = new Map<string, Worker>()
   const sessionMap = new Map<string, Session>()
@@ -71,10 +74,13 @@ const importDump = async (ctx: Ctx): Promise<void> => {
       session.worker = worker
       worker.session = session
       updateWorkerShares(worker, session)
+      globalState.workerCount++
       if (session.state === WorkerState.WorkerIdle) {
         globalState.idleWorkerShares = globalState.idleWorkerShares.plus(
           worker.shares
         )
+        globalState.idleWorkerCount++
+        globalState.idleWorkerPInstant += session.pInstant
       }
     }
     sessionMap.set(session.id, session)

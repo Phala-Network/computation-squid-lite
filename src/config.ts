@@ -8,7 +8,7 @@ const config: {
   dataSource: DataSource
   blockRange: Exclude<BlockRangeOption['range'], undefined>
 } = {
-  blockRange: {from: 3670131},
+  blockRange: {from: 4000001},
   dataSource: {archive: lookupArchive('khala')},
 }
 

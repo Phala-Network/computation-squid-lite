@@ -1,6 +1,6 @@
 manifestVersion: subsquid.io/v0.1
 name: khala-computation-lite
-version: 1
+version: 2
 description: 'Khala computation lite'
 build:
 deploy:
@@ -22,3 +22,7 @@ deploy:
       - '100'
       - '--dumb-cache-max-age'
       - '1000'
+scale:
+  dedicated: true
+  processor:
+    profile: large

@@ -16,4 +16,13 @@ export class GlobalState {
 
     @Column_("numeric", {transformer: marshal.bigdecimalTransformer, nullable: false})
     idleWorkerShares!: BigDecimal
+
+    @Column_("int4", {nullable: false})
+    idleWorkerPInstant!: number
+
+    @Column_("int4", {nullable: false})
+    workerCount!: number
+
+    @Column_("int4", {nullable: false})
+    idleWorkerCount!: number
 }
