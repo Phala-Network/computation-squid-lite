@@ -266,6 +266,10 @@ processor.run(new TypeormDatabase(), async (ctx) => {
     }
   }
 
+  globalState.workerCount = workerCount
+  globalState.idleWorkerPInstant = idleWorkerPInstant
+  globalState.idleWorkerCount = idleWorkerCount
+
   await ctx.store.save(globalState)
   await ctx.store.save([...sessionMap.values()])
   await ctx.store.save([...workerMap.values()])
