@@ -22,7 +22,7 @@ deploy:
       - '100'
       - '--dumb-cache-max-age'
       - '1000'
-scale:
-  dedicated: true
-  processor:
-    profile: large
+# scale:
+#   dedicated: true
+#   processor:
+#     profile: large
