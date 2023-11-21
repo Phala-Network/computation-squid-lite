@@ -254,11 +254,13 @@ processor.run(new TypeormDatabase(), async (ctx) => {
   }
 
   let workerCount = 0
+  let idleWorkerPInit = 0
   let idleWorkerPInstant = 0
   let idleWorkerCount = 0
   for (const [, session] of sessionMap) {
     if (session.state === WorkerState.WorkerIdle) {
       idleWorkerPInstant += session.pInstant
+      idleWorkerPInit += session.pInit
       idleWorkerCount += 1
     }
     if (session.isBound) {
@@ -267,6 +269,7 @@ processor.run(new TypeormDatabase(), async (ctx) => {
   }
 
   globalState.workerCount = workerCount
+  globalState.idleWorkerPInit = idleWorkerPInit
   globalState.idleWorkerPInstant = idleWorkerPInstant
   globalState.idleWorkerCount = idleWorkerCount
 
