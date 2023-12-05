@@ -1,6 +1,7 @@
 import assert from 'assert'
 import {Chain, ChainContext, EventContext, Event, Result, Option} from './support'
 import * as v1199 from './v1199'
+import * as v1260 from './v1260'
 
 export class PhalaComputationBenchmarkUpdatedEvent {
     private readonly _chain: Chain
@@ -383,6 +384,15 @@ export class PhalaRegistryWorkerAddedEvent {
         assert(this.isV1199)
         return this._chain.decodeEvent(this.event)
     }
+
+    get isV1260(): boolean {
+        return this._chain.getEventHash('PhalaRegistry.WorkerAdded') === '4dd51267274653ad03548966b7fc0142c3a3e84c792eeb734aa69b56dfdd3e5a'
+    }
+
+    get asV1260(): {pubkey: Uint8Array, attestationProvider: (v1260.AttestationProvider | undefined), confidenceLevel: number} {
+        assert(this.isV1260)
+        return this._chain.decodeEvent(this.event)
+    }
 }
 
 export class PhalaRegistryWorkerUpdatedEvent {
@@ -422,6 +432,15 @@ export class PhalaRegistryWorkerUpdatedEvent {
 
     get asV1199(): {pubkey: Uint8Array, attestationProvider: (v1199.AttestationProvider | undefined), confidenceLevel: number} {
         assert(this.isV1199)
+        return this._chain.decodeEvent(this.event)
+    }
+
+    get isV1260(): boolean {
+        return this._chain.getEventHash('PhalaRegistry.WorkerUpdated') === '4dd51267274653ad03548966b7fc0142c3a3e84c792eeb734aa69b56dfdd3e5a'
+    }
+
+    get asV1260(): {pubkey: Uint8Array, attestationProvider: (v1260.AttestationProvider | undefined), confidenceLevel: number} {
+        assert(this.isV1260)
         return this._chain.decodeEvent(this.event)
     }
 }

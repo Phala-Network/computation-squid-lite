@@ -226,7 +226,7 @@ processor.run(new TypeormDatabase(), async (ctx) => {
         }
         case 'PhalaRegistry.WorkerAdded': {
           const e = new PhalaRegistryWorkerAddedEvent(ctx, item.event)
-          const {pubkey, confidenceLevel} = e.asV1199
+          const {pubkey, confidenceLevel} = e.isV1199 ? e.asV1199 : e.asV1260
           const id = toHex(pubkey)
           const worker = new Worker({id, confidenceLevel})
           workerMap.set(id, worker)
@@ -235,7 +235,7 @@ processor.run(new TypeormDatabase(), async (ctx) => {
         }
         case 'PhalaRegistry.WorkerUpdated': {
           const e = new PhalaRegistryWorkerUpdatedEvent(ctx, item.event)
-          const {pubkey, confidenceLevel} = e.asV1199
+          const {pubkey, confidenceLevel} = e.isV1199 ? e.asV1199 : e.asV1260
           const id = toHex(pubkey)
           const worker = assertGet(workerMap, id)
           worker.confidenceLevel = confidenceLevel
