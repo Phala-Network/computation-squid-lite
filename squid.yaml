@@ -7,22 +7,12 @@ deploy:
   addons:
     postgres:
   processor:
+    env:
+      RPC_ENDPOINT: wss://priv-api.phala.network/khala/ws
     cmd:
-      - node
-      - lib/processor
+      - sqd
+      - process:prod
   api:
     cmd:
-      - npx
-      - squid-graphql-server
-      - '--dumb-cache'
-      - in-memory
-      - '--dumb-cache-ttl'
-      - '1000'
-      - '--dumb-cache-size'
-      - '100'
-      - '--dumb-cache-max-age'
-      - '1000'
-# scale:
-#   dedicated: true
-#   processor:
-#     profile: large
+      - sqd
+      - serve:prod

@@ -1,9 +1,8 @@
 import {BigDecimal} from '@subsquid/big-decimal'
 import {
-  BatchProcessorItem,
   DataHandlerContext,
   SubstrateBatchProcessor,
-  toHex,
+  SubstrateBatchProcessorFields,
 } from '@subsquid/substrate-processor'
 import {Store, TypeormDatabase} from '@subsquid/typeorm-store'
 import assert from 'assert'
@@ -15,19 +14,7 @@ import {
   WorkerSharesSnapshot,
   WorkerState,
 } from './model'
-import {
-  PhalaComputationBenchmarkUpdatedEvent,
-  PhalaComputationSessionBoundEvent,
-  PhalaComputationSessionSettledEvent,
-  PhalaComputationSessionUnboundEvent,
-  PhalaComputationWorkerEnterUnresponsiveEvent,
-  PhalaComputationWorkerExitUnresponsiveEvent,
-  PhalaComputationWorkerStartedEvent,
-  PhalaComputationWorkerStoppedEvent,
-  PhalaRegistryInitialScoreSetEvent,
-  PhalaRegistryWorkerAddedEvent,
-  PhalaRegistryWorkerUpdatedEvent,
-} from './types/events'
+import {phalaComputation, phalaRegistry} from './types/events'
 import {assertGet, encodeAddress, fromBits, toMap} from './utils'
 import {updateWorkerShares} from './worker'
 import importDump from './importDump'
@@ -36,22 +23,29 @@ const processor = new SubstrateBatchProcessor()
   .setDataSource(config.dataSource)
   .setBlockRange(config.blockRange)
   .includeAllBlocks(config.blockRange)
-  .addEvent('PhalaComputation.SessionBound')
-  .addEvent('PhalaComputation.SessionUnbound')
-  .addEvent('PhalaComputation.SessionSettled')
-  .addEvent('PhalaComputation.WorkerStarted')
-  .addEvent('PhalaComputation.WorkerStopped')
-  .addEvent('PhalaComputation.WorkerReclaimed')
-  .addEvent('PhalaComputation.WorkerEnterUnresponsive')
-  .addEvent('PhalaComputation.WorkerExitUnresponsive')
-  .addEvent('PhalaComputation.BenchmarkUpdated')
+  .addEvent({
+    name: [
+      phalaComputation.sessionBound.name,
+      phalaComputation.sessionUnbound.name,
+      phalaComputation.sessionSettled.name,
+      phalaComputation.workerStarted.name,
+      phalaComputation.workerStopped.name,
+      phalaComputation.workerEnterUnresponsive.name,
+      phalaComputation.workerExitUnresponsive.name,
+      phalaComputation.benchmarkUpdated.name,
+      phalaRegistry.workerAdded.name,
+      phalaRegistry.workerUpdated.name,
+      phalaRegistry.initialScoreSet.name,
+    ],
+  })
 
-  .addEvent('PhalaRegistry.WorkerAdded')
-  .addEvent('PhalaRegistry.WorkerUpdated')
-  .addEvent('PhalaRegistry.InitialScoreSet')
+  .setFields({
+    block: {timestamp: true},
+    event: {name: true, args: true},
+  })
 
-type Item = BatchProcessorItem<typeof processor>
-export type Ctx = DataHandlerContext<Store, Item>
+export type Fields = SubstrateBatchProcessorFields<typeof processor>
+export type Ctx = DataHandlerContext<Store, Fields>
 
 processor.run(new TypeormDatabase(), async (ctx) => {
   if ((await ctx.store.get(GlobalState, '0')) == null) {
@@ -69,15 +63,15 @@ processor.run(new TypeormDatabase(), async (ctx) => {
     .find(Session, {relations: {worker: true}})
     .then(toMap)
   for (const block of ctx.blocks) {
+    assert(block.header.timestamp)
     const blockTime = new Date(block.header.timestamp)
-    for (const item of block.items) {
-      switch (item.name) {
-        case 'PhalaComputation.SessionBound': {
+    for (const event of block.events) {
+      switch (event.name) {
+        case phalaComputation.sessionBound.name: {
           // Memo: SessionBound happens before PoolWorkerAdded
-          const e = new PhalaComputationSessionBoundEvent(ctx, item.event)
-          const {session: sessionIdBytes, worker: workerIdU8a} = e.asV1199
+          const {session: sessionIdBytes, worker: workerId} =
+            phalaComputation.sessionBound.v1199.decode(event)
           const sessionId = encodeAddress(sessionIdBytes)
-          const workerId = toHex(workerIdU8a)
           let session = sessionMap.get(sessionId)
           const worker = assertGet(workerMap, workerId)
           if (session == null) {
@@ -99,11 +93,10 @@ processor.run(new TypeormDatabase(), async (ctx) => {
           worker.session = session
           break
         }
-        case 'PhalaComputation.SessionUnbound': {
-          const e = new PhalaComputationSessionUnboundEvent(ctx, item.event)
-          const {session: sessionIdBytes, worker: workerIdU8a} = e.asV1199
+        case phalaComputation.sessionUnbound.name: {
+          const {session: sessionIdBytes, worker: workerId} =
+            phalaComputation.sessionUnbound.v1199.decode(event)
           const sessionId = encodeAddress(sessionIdBytes)
-          const workerId = toHex(workerIdU8a)
           const session = assertGet(sessionMap, sessionId)
           const worker = assertGet(workerMap, workerId)
           assert(session.worker)
@@ -113,9 +106,12 @@ processor.run(new TypeormDatabase(), async (ctx) => {
           session.isBound = false
           break
         }
-        case 'PhalaComputation.SessionSettled': {
-          const e = new PhalaComputationSessionSettledEvent(ctx, item.event)
-          const {session: sessionIdBytes, vBits, payoutBits} = e.asV1199
+        case phalaComputation.sessionSettled.name: {
+          const {
+            session: sessionIdBytes,
+            vBits,
+            payoutBits,
+          } = phalaComputation.sessionSettled.v1199.decode(event)
           const v = fromBits(vBits)
           const sessionId = encodeAddress(sessionIdBytes)
           const payout = fromBits(payoutBits).round(12, 0)
@@ -134,9 +130,12 @@ processor.run(new TypeormDatabase(), async (ctx) => {
           }
           break
         }
-        case 'PhalaComputation.WorkerStarted': {
-          const e = new PhalaComputationWorkerStartedEvent(ctx, item.event)
-          const {session: sessionIdBytes, initV, initP} = e.asV1199
+        case phalaComputation.workerStarted.name: {
+          const {
+            session: sessionIdBytes,
+            initV,
+            initP,
+          } = phalaComputation.workerStarted.v1199.decode(event)
           const sessionId = encodeAddress(sessionIdBytes)
           const v = fromBits(initV)
           const session = assertGet(sessionMap, sessionId)
@@ -152,9 +151,9 @@ processor.run(new TypeormDatabase(), async (ctx) => {
           )
           break
         }
-        case 'PhalaComputation.WorkerStopped': {
-          const e = new PhalaComputationWorkerStoppedEvent(ctx, item.event)
-          const {session: sessionIdBytes} = e.asV1199
+        case phalaComputation.workerStopped.name: {
+          const {session: sessionIdBytes} =
+            phalaComputation.workerStopped.v1199.decode(event)
           const sessionId = encodeAddress(sessionIdBytes)
           const session = assertGet(sessionMap, sessionId)
           assert(session.worker)
@@ -169,12 +168,9 @@ processor.run(new TypeormDatabase(), async (ctx) => {
           session.coolingDownStartTime = blockTime
           break
         }
-        case 'PhalaComputation.WorkerEnterUnresponsive': {
-          const e = new PhalaComputationWorkerEnterUnresponsiveEvent(
-            ctx,
-            item.event
-          )
-          const {session: sessionIdBytes} = e.asV1199
+        case phalaComputation.workerEnterUnresponsive.name: {
+          const {session: sessionIdBytes} =
+            phalaComputation.workerEnterUnresponsive.v1199.decode(event)
           const sessionId = encodeAddress(sessionIdBytes)
           const session = assertGet(sessionMap, sessionId)
           assert(session.worker)
@@ -188,12 +184,9 @@ processor.run(new TypeormDatabase(), async (ctx) => {
           }
           break
         }
-        case 'PhalaComputation.WorkerExitUnresponsive': {
-          const e = new PhalaComputationWorkerExitUnresponsiveEvent(
-            ctx,
-            item.event
-          )
-          const {session: sessionIdBytes} = e.asV1199
+        case phalaComputation.workerExitUnresponsive.name: {
+          const {session: sessionIdBytes} =
+            phalaComputation.workerExitUnresponsive.v1199.decode(event)
           const sessionId = encodeAddress(sessionIdBytes)
           const session = assertGet(sessionMap, sessionId)
           assert(session.worker)
@@ -207,9 +200,9 @@ processor.run(new TypeormDatabase(), async (ctx) => {
           session.state = WorkerState.WorkerIdle
           break
         }
-        case 'PhalaComputation.BenchmarkUpdated': {
-          const e = new PhalaComputationBenchmarkUpdatedEvent(ctx, item.event)
-          const {session: sessionIdBytes, pInstant} = e.asV1199
+        case phalaComputation.benchmarkUpdated.name: {
+          const {session: sessionIdBytes, pInstant} =
+            phalaComputation.benchmarkUpdated.v1199.decode(event)
           const sessionId = encodeAddress(sessionIdBytes)
           const session = assertGet(sessionMap, sessionId)
           session.pInstant = pInstant
@@ -224,27 +217,43 @@ processor.run(new TypeormDatabase(), async (ctx) => {
           }
           break
         }
-        case 'PhalaRegistry.WorkerAdded': {
-          const e = new PhalaRegistryWorkerAddedEvent(ctx, item.event)
-          const {pubkey, confidenceLevel} = e.isV1199 ? e.asV1199 : e.asV1260
-          const id = toHex(pubkey)
-          const worker = new Worker({id, confidenceLevel})
-          workerMap.set(id, worker)
-          await ctx.store.save(worker)
+        case phalaRegistry.workerAdded.name: {
+          if (phalaRegistry.workerAdded.v1199.is(event)) {
+            const {pubkey: id, confidenceLevel} =
+              phalaRegistry.workerAdded.v1199.decode(event)
+            const worker = new Worker({id, confidenceLevel})
+            workerMap.set(id, worker)
+            await ctx.store.save(worker)
+          } else if (phalaRegistry.workerAdded.v1260.is(event)) {
+            const {pubkey: id, confidenceLevel} =
+              phalaRegistry.workerAdded.v1260.decode(event)
+            const worker = new Worker({id, confidenceLevel})
+            workerMap.set(id, worker)
+            await ctx.store.save(worker)
+          } else {
+            throw new Error('Unknown event version')
+          }
           break
         }
-        case 'PhalaRegistry.WorkerUpdated': {
-          const e = new PhalaRegistryWorkerUpdatedEvent(ctx, item.event)
-          const {pubkey, confidenceLevel} = e.isV1199 ? e.asV1199 : e.asV1260
-          const id = toHex(pubkey)
-          const worker = assertGet(workerMap, id)
-          worker.confidenceLevel = confidenceLevel
+        case phalaRegistry.workerUpdated.name: {
+          if (phalaRegistry.workerUpdated.v1199.is(event)) {
+            const {pubkey: id, confidenceLevel} =
+              phalaRegistry.workerUpdated.v1199.decode(event)
+            const worker = assertGet(workerMap, id)
+            worker.confidenceLevel = confidenceLevel
+          } else if (phalaRegistry.workerUpdated.v1260.is(event)) {
+            const {pubkey: id, confidenceLevel} =
+              phalaRegistry.workerUpdated.v1260.decode(event)
+            const worker = assertGet(workerMap, id)
+            worker.confidenceLevel = confidenceLevel
+          } else {
+            throw new Error('Unknown event version')
+          }
           break
         }
-        case 'PhalaRegistry.InitialScoreSet': {
-          const e = new PhalaRegistryInitialScoreSetEvent(ctx, item.event)
-          const {pubkey, initScore} = e.asV1182
-          const id = toHex(pubkey)
+        case phalaRegistry.initialScoreSet.name: {
+          const {pubkey: id, initScore} =
+            phalaRegistry.initialScoreSet.v1182.decode(event)
           const worker = assertGet(workerMap, id)
           worker.initialScore = initScore
           break
@@ -278,7 +287,7 @@ processor.run(new TypeormDatabase(), async (ctx) => {
   await ctx.store.save([...workerMap.values()])
 
   const lastBlock = ctx.blocks.at(-1)
-  assert(lastBlock)
+  assert(lastBlock?.header.timestamp)
   const updatedTime = new Date(lastBlock.header.timestamp)
   const minutes = updatedTime.getUTCMinutes()
   updatedTime.setUTCMinutes(minutes - (minutes % 10), 0, 0)

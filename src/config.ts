@@ -1,15 +1,19 @@
 import {lookupArchive} from '@subsquid/archive-registry'
-import {
-  type BlockRangeOption,
-  type DataSource,
-} from '@subsquid/substrate-processor'
+import {assertNotNull, type DataSource} from '@subsquid/substrate-processor'
+import {type Range} from '@subsquid/util-internal-processor-tools'
 
 const config: {
   dataSource: DataSource
-  blockRange: Exclude<BlockRangeOption['range'], undefined>
+  blockRange: Range
 } = {
   blockRange: {from: 4000001},
-  dataSource: {archive: lookupArchive('khala')},
+  dataSource: {
+    archive: lookupArchive('khala', {release: 'ArrowSquid'}),
+    chain: {
+      url: assertNotNull(process.env.RPC_ENDPOINT),
+      rateLimit: 100,
+    },
+  },
 }
 
 export default config

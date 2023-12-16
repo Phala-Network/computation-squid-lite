@@ -1,6 +1,6 @@
 import {BigDecimal} from '@subsquid/big-decimal'
 import {GlobalState, Session, Worker, WorkerState} from './model'
-import {type Ctx} from './processor'
+import {type Ctx} from './main'
 import {assertGet, fromBits, toBalance} from './utils'
 import {updateWorkerShares} from './worker'
 import fetch from 'node-fetch'
