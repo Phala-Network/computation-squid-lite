@@ -12,9 +12,9 @@ const decodeEvent = (
   )
   switch (name) {
     case phalaComputation.sessionBound.name: {
-      if (phalaComputation.sessionBound.v1199.is(event)) {
+      if (phalaComputation.sessionBound.v1240.is(event)) {
         const {session, worker} =
-          phalaComputation.sessionBound.v1199.decode(event)
+          phalaComputation.sessionBound.v1240.decode(event)
         return {
           name,
           args: {sessionId: encodeAddress(session), workerId: worker},
@@ -23,9 +23,9 @@ const decodeEvent = (
       throw error
     }
     case phalaComputation.sessionUnbound.name: {
-      if (phalaComputation.sessionUnbound.v1199.is(event)) {
+      if (phalaComputation.sessionUnbound.v1240.is(event)) {
         const {session, worker} =
-          phalaComputation.sessionUnbound.v1199.decode(event)
+          phalaComputation.sessionUnbound.v1240.decode(event)
         return {
           name,
           args: {sessionId: encodeAddress(session), workerId: worker},
@@ -34,9 +34,9 @@ const decodeEvent = (
       throw error
     }
     case phalaComputation.sessionSettled.name: {
-      if (phalaComputation.sessionSettled.v1199.is(event)) {
+      if (phalaComputation.sessionSettled.v1240.is(event)) {
         const {session, vBits, payoutBits} =
-          phalaComputation.sessionSettled.v1199.decode(event)
+          phalaComputation.sessionSettled.v1240.decode(event)
         return {
           name,
           args: {
@@ -49,9 +49,9 @@ const decodeEvent = (
       throw error
     }
     case phalaComputation.workerStarted.name: {
-      if (phalaComputation.workerStarted.v1199.is(event)) {
+      if (phalaComputation.workerStarted.v1240.is(event)) {
         const {session, initV, initP} =
-          phalaComputation.workerStarted.v1199.decode(event)
+          phalaComputation.workerStarted.v1240.decode(event)
         return {
           name,
           args: {
@@ -64,16 +64,16 @@ const decodeEvent = (
       throw error
     }
     case phalaComputation.workerStopped.name: {
-      if (phalaComputation.workerStopped.v1199.is(event)) {
-        const {session} = phalaComputation.workerStopped.v1199.decode(event)
+      if (phalaComputation.workerStopped.v1240.is(event)) {
+        const {session} = phalaComputation.workerStopped.v1240.decode(event)
         return {name, args: {sessionId: encodeAddress(session)}}
       }
       throw error
     }
     case phalaComputation.workerReclaimed.name: {
-      if (phalaComputation.workerReclaimed.v1199.is(event)) {
+      if (phalaComputation.workerReclaimed.v1240.is(event)) {
         const {session, originalStake, slashed} =
-          phalaComputation.workerReclaimed.v1199.decode(event)
+          phalaComputation.workerReclaimed.v1240.decode(event)
         return {
           name,
           args: {
@@ -86,25 +86,25 @@ const decodeEvent = (
       throw error
     }
     case phalaComputation.workerEnterUnresponsive.name: {
-      if (phalaComputation.workerEnterUnresponsive.v1199.is(event)) {
+      if (phalaComputation.workerEnterUnresponsive.v1240.is(event)) {
         const {session} =
-          phalaComputation.workerEnterUnresponsive.v1199.decode(event)
+          phalaComputation.workerEnterUnresponsive.v1240.decode(event)
         return {name, args: {sessionId: encodeAddress(session)}}
       }
       throw error
     }
     case phalaComputation.workerExitUnresponsive.name: {
-      if (phalaComputation.workerExitUnresponsive.v1199.is(event)) {
+      if (phalaComputation.workerExitUnresponsive.v1240.is(event)) {
         const {session} =
-          phalaComputation.workerExitUnresponsive.v1199.decode(event)
+          phalaComputation.workerExitUnresponsive.v1240.decode(event)
         return {name, args: {sessionId: encodeAddress(session)}}
       }
       throw error
     }
     case phalaComputation.benchmarkUpdated.name: {
-      if (phalaComputation.benchmarkUpdated.v1199.is(event)) {
+      if (phalaComputation.benchmarkUpdated.v1240.is(event)) {
         const {session, pInstant} =
-          phalaComputation.benchmarkUpdated.v1199.decode(event)
+          phalaComputation.benchmarkUpdated.v1240.decode(event)
         return {name, args: {sessionId: encodeAddress(session), pInstant}}
       }
       throw error
@@ -118,9 +118,9 @@ const decodeEvent = (
           args: {workerId: pubkey, confidenceLevel},
         }
       }
-      if (phalaRegistry.workerAdded.v1199.is(event)) {
+      if (phalaRegistry.workerAdded.v1240.is(event)) {
         const {pubkey, confidenceLevel} =
-          phalaRegistry.workerAdded.v1199.decode(event)
+          phalaRegistry.workerAdded.v1240.decode(event)
         return {
           name,
           args: {workerId: pubkey, confidenceLevel},
@@ -137,9 +137,9 @@ const decodeEvent = (
           args: {workerId: pubkey, confidenceLevel},
         }
       }
-      if (phalaRegistry.workerUpdated.v1199.is(event)) {
+      if (phalaRegistry.workerUpdated.v1240.is(event)) {
         const {pubkey, confidenceLevel} =
-          phalaRegistry.workerUpdated.v1199.decode(event)
+          phalaRegistry.workerUpdated.v1240.decode(event)
         return {
           name,
           args: {workerId: pubkey, confidenceLevel},
@@ -148,9 +148,9 @@ const decodeEvent = (
       throw error
     }
     case phalaRegistry.initialScoreSet.name: {
-      if (phalaRegistry.initialScoreSet.v1182.is(event)) {
+      if (phalaRegistry.initialScoreSet.v1240.is(event)) {
         const {pubkey, initScore} =
-          phalaRegistry.initialScoreSet.v1182.decode(event)
+          phalaRegistry.initialScoreSet.v1240.decode(event)
         return {
           name,
           args: {workerId: pubkey, initialScore: initScore},

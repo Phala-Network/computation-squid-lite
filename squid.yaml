@@ -1,15 +1,15 @@
 manifestVersion: subsquid.io/v0.1
-name: khala-computation-lite
+name: phala-computation-lite
 version: 4
-description: 'Khala computation lite'
+description: 'Phala computation lite'
 build:
 deploy:
   addons:
     postgres:
   processor:
     env:
-      FROM: 4000001
-      RPC_ENDPOINT: wss://priv-api.phala.network/khala/ws
+      FROM: 2700001
+      RPC_ENDPOINT: wss://priv-api.phala.network/phala/ws
     cmd:
       - sqd
       - process:prod

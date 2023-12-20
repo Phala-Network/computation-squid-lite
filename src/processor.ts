@@ -12,7 +12,7 @@ import {phalaComputation, phalaRegistry} from './types/events'
 const from = Number.parseInt(assertNotNull(process.env.FROM))
 
 export const processor = new SubstrateBatchProcessor()
-  .setGateway(lookupArchive('khala', {release: 'ArrowSquid'}))
+  .setGateway(lookupArchive('phala', {release: 'ArrowSquid'}))
   .setRpcEndpoint(assertNotNull(process.env.RPC_ENDPOINT))
   .setBlockRange({from})
   .includeAllBlocks()

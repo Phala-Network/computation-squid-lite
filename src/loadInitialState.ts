@@ -28,7 +28,7 @@ interface InitialState {
 
 const loadInitialState = async (ctx: Ctx): Promise<void> => {
   const initialState = await fetch(
-    'https://raw.githubusercontent.com/Phala-Network/computation-squid-lite/main/initial_state/khala_4000000.json',
+    'https://raw.githubusercontent.com/Phala-Network/computation-squid-lite/phala/initial_state/phala_2700000.json',
   ).then(async (res) => (await res.json()) as InitialState)
   const globalState = new GlobalState({
     id: '0',
