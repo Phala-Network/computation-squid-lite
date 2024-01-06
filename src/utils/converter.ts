@@ -1,7 +1,6 @@
 import {BigDecimal} from '@subsquid/big-decimal'
 import * as ss58 from '@subsquid/ss58'
 import {isHex} from '@subsquid/util-internal-hex'
-import assert from 'assert'
 
 export type JsonBigInt = string | number // Polkadot.js toJSON() BigInt type
 
@@ -23,14 +22,3 @@ export const encodeAddress = (bytes: ss58.Bytes | Uint8Array): string =>
 
 export const decodeAddress = (address: string): ss58.Bytes =>
   ss58.codec('phala').decode(address)
-
-export const assertGet = <T, U>(map: Map<U, T>, key: U): T => {
-  const value = map.get(key)
-  assert(value)
-  return value
-}
-
-export const toMap = <T extends {id: string}>(
-  a: T[],
-  fn: (a: T) => string = (a) => a.id
-): Map<string, T> => new Map(a.map((a) => [fn(a), a]))

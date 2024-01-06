@@ -1,9 +1,10 @@
 import {BigDecimal} from '@subsquid/big-decimal'
 import {GlobalState, Session, Worker, WorkerState} from './model'
-import {type Ctx} from './main'
-import {assertGet, fromBits, toBalance} from './utils'
+import {type Ctx} from './processor'
+import {fromBits, toBalance} from './utils/converter'
 import {updateWorkerShares} from './worker'
 import fetch from 'node-fetch'
+import {assertGet} from './utils/common'
 
 interface Dump {
   timestamp: number
@@ -34,6 +35,7 @@ const importDump = async (ctx: Ctx): Promise<void> => {
     id: '0',
     idleWorkerShares: BigDecimal(0),
     idleWorkerCount: 0,
+    idleWorkerPInit: 0,
     idleWorkerPInstant: 0,
     workerCount: 0,
   })
@@ -80,6 +82,7 @@ const importDump = async (ctx: Ctx): Promise<void> => {
           worker.shares
         )
         globalState.idleWorkerCount++
+        globalState.idleWorkerPInit += session.pInit
         globalState.idleWorkerPInstant += session.pInstant
       }
     }

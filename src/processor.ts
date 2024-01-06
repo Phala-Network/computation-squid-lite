@@ -1,0 +1,41 @@
+import {
+  SubstrateBatchProcessor,
+  type BlockHeader,
+  type DataHandlerContext,
+  type SubstrateBatchProcessorFields,
+  assertNotNull,
+} from '@subsquid/substrate-processor'
+import {type Store} from '@subsquid/typeorm-store'
+import {phalaComputation, phalaRegistry} from './types/events'
+import {lookupArchive} from '@subsquid/archive-registry'
+
+const from = parseInt(assertNotNull(process.env.FROM))
+
+export const processor = new SubstrateBatchProcessor()
+  .setGateway(lookupArchive('khala', {release: 'ArrowSquid'}))
+  .setRpcEndpoint(assertNotNull(process.env.RPC_ENDPOINT))
+  .setBlockRange({from})
+  .includeAllBlocks({from})
+  .addEvent({
+    name: [
+      phalaComputation.sessionBound.name,
+      phalaComputation.sessionUnbound.name,
+      phalaComputation.sessionSettled.name,
+      phalaComputation.workerStarted.name,
+      phalaComputation.workerStopped.name,
+      phalaComputation.workerEnterUnresponsive.name,
+      phalaComputation.workerExitUnresponsive.name,
+      phalaComputation.benchmarkUpdated.name,
+      phalaRegistry.workerAdded.name,
+      phalaRegistry.workerUpdated.name,
+      phalaRegistry.initialScoreSet.name,
+    ],
+  })
+  .setFields({
+    block: {timestamp: true},
+    event: {name: true, args: true},
+  })
+
+export type Fields = SubstrateBatchProcessorFields<typeof processor>
+export type Ctx = DataHandlerContext<Store, Fields>
+export type SubstrateBlock = BlockHeader<Fields>

@@ -8,6 +8,7 @@ deploy:
     postgres:
   processor:
     env:
+      FROM: 4000001
       RPC_ENDPOINT: wss://priv-api.phala.network/khala/ws
     cmd:
       - sqd
@@ -18,7 +19,6 @@ deploy:
       - serve:prod
 
 scale:
-  dedicated: true
   addons:
     postgres:
       storage: 20G
