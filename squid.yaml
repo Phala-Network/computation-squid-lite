@@ -1,6 +1,6 @@
 manifestVersion: subsquid.io/v0.1
 name: khala-computation-lite
-version: 3
+version: 4
 description: 'Khala computation lite'
 build:
 deploy:

@@ -1,12 +1,11 @@
 import {BigDecimal} from '@subsquid/big-decimal'
-import {GlobalState, Session, Worker, WorkerState} from './model'
-import {type Ctx} from './processor'
-import {fromBits, toBalance} from './utils/converter'
-import {updateWorkerShares} from './worker'
 import fetch from 'node-fetch'
-import {assertGet} from './utils/common'
+import {GlobalState, Session, Worker, WorkerState} from './model'
+import type {Ctx} from './processor'
+import {assertGet, fromBits, save, toBalance} from './utils'
+import {updateSessionShares} from './worker'
 
-interface Dump {
+interface InitialState {
   timestamp: number
   workers: Array<{
     id: string
@@ -27,10 +26,10 @@ interface Dump {
   }>
 }
 
-const importDump = async (ctx: Ctx): Promise<void> => {
-  const dump = await fetch(
-    'https://raw.githubusercontent.com/Phala-Network/computation-squid-lite/main/dump/khala_4000000.json'
-  ).then(async (res) => (await res.json()) as Dump)
+const loadInitialState = async (ctx: Ctx): Promise<void> => {
+  const initialState = await fetch(
+    'https://raw.githubusercontent.com/Phala-Network/computation-squid-lite/main/initial_state/khala_4000000.json',
+  ).then(async (res) => (await res.json()) as InitialState)
   const globalState = new GlobalState({
     id: '0',
     idleWorkerShares: BigDecimal(0),
@@ -42,7 +41,7 @@ const importDump = async (ctx: Ctx): Promise<void> => {
   const workerMap = new Map<string, Worker>()
   const sessionMap = new Map<string, Session>()
 
-  for (const w of dump.workers) {
+  for (const w of initialState.workers) {
     const worker = new Worker({
       id: w.id,
       confidenceLevel: w.confidenceLevel,
@@ -51,13 +50,9 @@ const importDump = async (ctx: Ctx): Promise<void> => {
     workerMap.set(worker.id, worker)
   }
 
-  // MEMO: insert worker first to avoid invalid foreign key
-  await ctx.store.insert([...workerMap.values()])
-
-  for (const s of dump.sessions) {
+  for (const s of initialState.sessions) {
     const session = new Session({
       id: s.id,
-      isBound: false,
       v: fromBits(s.v),
       ve: fromBits(s.ve),
       state: s.state,
@@ -69,17 +64,16 @@ const importDump = async (ctx: Ctx): Promise<void> => {
           ? null
           : new Date(s.coolingDownStartTime * 1000),
       stake: toBalance(s.stake),
+      shares: BigDecimal(0),
     })
     if (s.worker != null) {
       const worker = assertGet(workerMap, s.worker)
-      session.isBound = true
       session.worker = worker
-      worker.session = session
-      updateWorkerShares(worker, session)
+      updateSessionShares(session, worker)
       globalState.workerCount++
       if (session.state === WorkerState.WorkerIdle) {
         globalState.idleWorkerShares = globalState.idleWorkerShares.plus(
-          worker.shares
+          session.shares,
         )
         globalState.idleWorkerCount++
         globalState.idleWorkerPInit += session.pInit
@@ -89,13 +83,7 @@ const importDump = async (ctx: Ctx): Promise<void> => {
     sessionMap.set(session.id, session)
   }
 
-  for (const x of [globalState, sessionMap, workerMap]) {
-    if (x instanceof Map) {
-      await ctx.store.save([...x.values()])
-    } else {
-      await ctx.store.save(x)
-    }
-  }
+  await save(ctx, [globalState, workerMap, sessionMap])
 }
 
-export default importDump
+export default loadInitialState

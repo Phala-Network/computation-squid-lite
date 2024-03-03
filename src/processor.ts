@@ -1,21 +1,21 @@
+import {lookupArchive} from '@subsquid/archive-registry'
 import {
-  SubstrateBatchProcessor,
   type BlockHeader,
   type DataHandlerContext,
+  SubstrateBatchProcessor,
   type SubstrateBatchProcessorFields,
   assertNotNull,
 } from '@subsquid/substrate-processor'
-import {type Store} from '@subsquid/typeorm-store'
+import type {Store} from '@subsquid/typeorm-store'
 import {phalaComputation, phalaRegistry} from './types/events'
-import {lookupArchive} from '@subsquid/archive-registry'
 
-const from = parseInt(assertNotNull(process.env.FROM))
+const from = Number.parseInt(assertNotNull(process.env.FROM))
 
 export const processor = new SubstrateBatchProcessor()
   .setGateway(lookupArchive('khala', {release: 'ArrowSquid'}))
   .setRpcEndpoint(assertNotNull(process.env.RPC_ENDPOINT))
   .setBlockRange({from})
-  .includeAllBlocks({from})
+  .includeAllBlocks()
   .addEvent({
     name: [
       phalaComputation.sessionBound.name,

@@ -1,9 +1,10 @@
+import assert from 'node:assert'
 import {BigDecimal} from '@subsquid/big-decimal'
 import {TypeormDatabase} from '@subsquid/typeorm-store'
-import assert from 'assert'
+import {isAfter} from 'date-fns'
 import {In} from 'typeorm'
 import decodeEvents from './decodeEvents'
-import importDump from './importDump'
+import loadInitialState from './loadInitialState'
 import {
   GlobalState,
   Session,
@@ -13,14 +14,19 @@ import {
 } from './model'
 import {processor} from './processor'
 import {phalaComputation, phalaRegistry} from './types/events'
-import {assertGet, toMap} from './utils/common'
-import {updateWorkerShares} from './worker'
+import {assertGet, save, toMap} from './utils'
+import {updateSessionShares} from './worker'
 
 processor.run(new TypeormDatabase(), async (ctx) => {
+  ctx.log.info(
+    `Process from ${ctx.blocks[0].header.height} to ${
+      ctx.blocks[ctx.blocks.length - 1].header.height
+    }`,
+  )
   if ((await ctx.store.get(GlobalState, '0')) == null) {
-    ctx.log.info('Importing dump...')
-    await importDump(ctx)
-    ctx.log.info('Dump imported')
+    ctx.log.info('Loading initial state')
+    await loadInitialState(ctx)
+    ctx.log.info('Initial state loaded')
   }
   const events = decodeEvents(ctx)
 
@@ -62,17 +68,23 @@ processor.run(new TypeormDatabase(), async (ctx) => {
       relations: {worker: true},
     })
     .then(toMap)
+  for (const session of sessionMap.values()) {
+    if (session.worker != null) {
+      workerIdSet.add(session.worker.id)
+    }
+  }
   const workerMap = await ctx.store
     .find(Worker, {
-      where: [
-        {id: In([...workerIdSet])},
-        {session: {id: In([...sessionIdSet])}},
-      ],
-      relations: {session: true},
+      where: [{id: In([...workerIdSet])}],
     })
     .then(toMap)
+  const snapshots: WorkerSharesSnapshot[] = []
+  let latestSnapshotUpdatedTime = await ctx.store
+    .find(WorkerSharesSnapshot, {order: {updatedTime: 'DESC'}, take: 1})
+    .then((snapshot) => snapshot[0]?.updatedTime)
 
-  for (const {name, args} of events) {
+  for (let i = 0; i < events.length; i++) {
+    const {name, args, block} = events[i]
     switch (name) {
       case phalaComputation.sessionBound.name: {
         // Memo: SessionBound happens before PoolWorkerAdded
@@ -82,7 +94,6 @@ processor.run(new TypeormDatabase(), async (ctx) => {
         if (session == null) {
           session = new Session({
             id: sessionId,
-            isBound: true,
             state: WorkerState.Ready,
             v: BigDecimal(0),
             ve: BigDecimal(0),
@@ -90,24 +101,20 @@ processor.run(new TypeormDatabase(), async (ctx) => {
             pInstant: 0,
             totalReward: BigDecimal(0),
             stake: BigDecimal(0),
+            shares: BigDecimal(0),
           })
           sessionMap.set(sessionId, session)
         }
-        session.isBound = true
         session.worker = worker
-        worker.session = session
         globalState.workerCount++
         break
       }
       case phalaComputation.sessionUnbound.name: {
         const {sessionId, workerId} = args
         const session = assertGet(sessionMap, sessionId)
-        const worker = assertGet(workerMap, workerId)
         assert(session.worker)
         assert(session.worker.id === workerId)
-        worker.session = null
-        worker.shares = null
-        session.isBound = false
+        session.worker = null
         globalState.workerCount--
         break
       }
@@ -118,13 +125,12 @@ processor.run(new TypeormDatabase(), async (ctx) => {
         session.totalReward = session.totalReward.plus(payout)
         session.v = v
         const worker = assertGet(workerMap, session.worker.id)
-        assert(worker.shares)
-        const prevShares = worker.shares
-        updateWorkerShares(worker, session)
+        const prevShares = session.shares
+        updateSessionShares(session, worker)
         if (session.state === WorkerState.WorkerIdle) {
           globalState.idleWorkerShares = globalState.idleWorkerShares
             .minus(prevShares)
-            .plus(worker.shares)
+            .plus(session.shares)
         }
         break
       }
@@ -137,9 +143,9 @@ processor.run(new TypeormDatabase(), async (ctx) => {
         session.v = initV
         session.state = WorkerState.WorkerIdle
         const worker = assertGet(workerMap, session.worker.id)
-        updateWorkerShares(worker, session)
+        updateSessionShares(session, worker)
         globalState.idleWorkerShares = globalState.idleWorkerShares.plus(
-          worker.shares
+          session.shares,
         )
         globalState.idleWorkerCount++
         globalState.idleWorkerPInit += session.pInit
@@ -149,12 +155,9 @@ processor.run(new TypeormDatabase(), async (ctx) => {
       case phalaComputation.workerStopped.name: {
         const {sessionId} = args
         const session = assertGet(sessionMap, sessionId)
-        assert(session.worker)
-        const worker = assertGet(workerMap, session.worker.id)
-        assert(worker.shares)
         if (session.state === WorkerState.WorkerIdle) {
           globalState.idleWorkerShares = globalState.idleWorkerShares.minus(
-            worker.shares
+            session.shares,
           )
           globalState.idleWorkerCount--
           globalState.idleWorkerPInit -= session.pInit
@@ -166,13 +169,10 @@ processor.run(new TypeormDatabase(), async (ctx) => {
       case phalaComputation.workerEnterUnresponsive.name: {
         const {sessionId} = args
         const session = assertGet(sessionMap, sessionId)
-        assert(session.worker)
         if (session.state === WorkerState.WorkerIdle) {
           session.state = WorkerState.WorkerUnresponsive
-          const worker = assertGet(workerMap, session.worker.id)
-          assert(worker.shares)
           globalState.idleWorkerShares = globalState.idleWorkerShares.minus(
-            worker.shares
+            session.shares,
           )
           globalState.idleWorkerCount--
           globalState.idleWorkerPInit -= session.pInit
@@ -183,12 +183,9 @@ processor.run(new TypeormDatabase(), async (ctx) => {
       case phalaComputation.workerExitUnresponsive.name: {
         const {sessionId} = args
         const session = assertGet(sessionMap, sessionId)
-        assert(session.worker)
         if (session.state === WorkerState.WorkerUnresponsive) {
-          const worker = assertGet(workerMap, session.worker.id)
-          assert(worker.shares)
           globalState.idleWorkerShares = globalState.idleWorkerShares.plus(
-            worker.shares
+            session.shares,
           )
           globalState.idleWorkerCount++
           globalState.idleWorkerPInit += session.pInit
@@ -200,18 +197,18 @@ processor.run(new TypeormDatabase(), async (ctx) => {
       case phalaComputation.benchmarkUpdated.name: {
         const {sessionId, pInstant} = args
         const session = assertGet(sessionMap, sessionId)
-        const prevPInstant = session.pInstant
-        session.pInstant = pInstant
         assert(session.worker)
         const worker = assertGet(workerMap, session.worker.id)
-        const prevShares = worker.shares ?? BigDecimal(0)
-        updateWorkerShares(worker, session)
+        const prevPInstant = session.pInstant
+        session.pInstant = pInstant
+        const prevShares = session.shares
+        updateSessionShares(session, worker)
         if (session.state === WorkerState.WorkerIdle) {
           globalState.idleWorkerShares = globalState.idleWorkerShares
             .minus(prevShares)
-            .plus(worker.shares)
+            .plus(session.shares)
           globalState.idleWorkerPInstant =
-            globalState.idleWorkerPInstant - prevPInstant + pInstant
+            globalState.idleWorkerPInstant - prevPInstant + session.pInstant
         }
         break
       }
@@ -219,7 +216,6 @@ processor.run(new TypeormDatabase(), async (ctx) => {
         const {workerId, confidenceLevel} = args
         const worker = new Worker({id: workerId, confidenceLevel})
         workerMap.set(workerId, worker)
-        await ctx.store.insert(worker)
         break
       }
       case phalaRegistry.workerUpdated.name: {
@@ -235,21 +231,31 @@ processor.run(new TypeormDatabase(), async (ctx) => {
         break
       }
     }
+
+    const nextEvent = events[i + 1]
+    const isLastEventInHandler = nextEvent == null
+    const isLastEventInBlock =
+      isLastEventInHandler || block.height !== nextEvent.block.height
+
+    if (isLastEventInBlock) {
+      assert(block.timestamp)
+      const updatedTime = new Date(block.timestamp)
+      const minutes = updatedTime.getUTCMinutes()
+      updatedTime.setUTCMinutes(minutes - (minutes % 10), 0, 0)
+      if (
+        latestSnapshotUpdatedTime == null ||
+        isAfter(updatedTime, latestSnapshotUpdatedTime)
+      ) {
+        const snapshot = new WorkerSharesSnapshot({
+          id: updatedTime.toISOString(),
+          updatedTime,
+          shares: globalState.idleWorkerShares,
+        })
+        snapshots.push(snapshot)
+        latestSnapshotUpdatedTime = updatedTime
+      }
+    }
   }
 
-  await ctx.store.save(globalState)
-  await ctx.store.save([...sessionMap.values()])
-  await ctx.store.save([...workerMap.values()])
-
-  const lastBlock = ctx.blocks.at(-1)
-  assert(lastBlock?.header.timestamp)
-  const updatedTime = new Date(lastBlock.header.timestamp)
-  const minutes = updatedTime.getUTCMinutes()
-  updatedTime.setUTCMinutes(minutes - (minutes % 10), 0, 0)
-  const snapshot = new WorkerSharesSnapshot({
-    id: updatedTime.toISOString(),
-    updatedTime,
-    shares: globalState.idleWorkerShares,
-  })
-  await ctx.store.save(snapshot)
+  await save(ctx, [globalState, workerMap, sessionMap, snapshots])
 })

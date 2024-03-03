@@ -17,6 +17,6 @@ export class WorkerSharesSnapshot {
     @Column_("timestamp with time zone", {nullable: false})
     updatedTime!: Date
 
-    @Column_("numeric", {transformer: marshal.bigdecimalTransformer, nullable: true})
-    shares!: BigDecimal | undefined | null
+    @Column_("numeric", {transformer: marshal.bigdecimalTransformer, nullable: false})
+    shares!: BigDecimal
 }

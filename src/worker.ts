@@ -1,5 +1,5 @@
 import {BigDecimal} from '@subsquid/big-decimal'
-import {type Session, type Worker} from './model'
+import type {Session, Worker} from './model'
 
 type ConfidenceLevel = 1 | 2 | 3 | 4 | 5
 const validateConfidenceLevel = (n: number): n is ConfidenceLevel =>
@@ -13,20 +13,19 @@ const confidenceScoreMap: Record<ConfidenceLevel, string> = {
   5: '0.7',
 }
 
-export function updateWorkerShares(
+export function updateSessionShares(
+  session: Session,
   worker: Worker,
-  session: Session
-): asserts worker is Worker & {shares: BigDecimal} {
-  const {v, pInstant, pInit} = session
+): asserts session is Session & {shares: BigDecimal} {
+  const {v, pInstant} = session
   const {confidenceLevel} = worker
   if (validateConfidenceLevel(confidenceLevel)) {
     const confidenceScore = confidenceScoreMap[confidenceLevel]
     const shares = v
       .pow(2)
-      .add(BigDecimal(2).mul(pInstant).mul(confidenceScore).pow(2))
+      .plus(BigDecimal(2).mul(pInstant).mul(confidenceScore).pow(2))
       .sqrt()
-      .round(12, 0)
-
-    worker.shares = shares
+      .round(12)
+    session.shares = shares
   }
 }

@@ -1,14 +1,14 @@
-import {type Ctx, type SubstrateBlock} from './processor'
-import {encodeAddress, fromBits, toBalance} from './utils/converter'
+import type {Ctx, SubstrateBlock} from './processor'
 import {phalaComputation, phalaRegistry} from './types/events'
+import {encodeAddress, fromBits, toBalance} from './utils'
 
 const decodeEvent = (
-  event: Ctx['blocks'][number]['events'][number]
+  event: Ctx['blocks'][number]['events'][number],
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 ) => {
   const {name} = event
   const error = new Error(
-    `Unsupported spec: ${event.name} v${event.block.specVersion}`
+    `Unsupported spec: ${event.name} v${event.block.specVersion}`,
   )
   switch (name) {
     case phalaComputation.sessionBound.name: {
@@ -19,9 +19,8 @@ const decodeEvent = (
           name,
           args: {sessionId: encodeAddress(session), workerId: worker},
         }
-      } else {
-        throw error
       }
+      throw error
     }
     case phalaComputation.sessionUnbound.name: {
       if (phalaComputation.sessionUnbound.v1199.is(event)) {
@@ -31,9 +30,8 @@ const decodeEvent = (
           name,
           args: {sessionId: encodeAddress(session), workerId: worker},
         }
-      } else {
-        throw error
       }
+      throw error
     }
     case phalaComputation.sessionSettled.name: {
       if (phalaComputation.sessionSettled.v1199.is(event)) {
@@ -44,12 +42,11 @@ const decodeEvent = (
           args: {
             sessionId: encodeAddress(session),
             v: fromBits(vBits),
-            payout: fromBits(payoutBits).round(12, 0),
+            payout: fromBits(payoutBits),
           },
         }
-      } else {
-        throw error
       }
+      throw error
     }
     case phalaComputation.workerStarted.name: {
       if (phalaComputation.workerStarted.v1199.is(event)) {
@@ -63,17 +60,15 @@ const decodeEvent = (
             initP,
           },
         }
-      } else {
-        throw error
       }
+      throw error
     }
     case phalaComputation.workerStopped.name: {
       if (phalaComputation.workerStopped.v1199.is(event)) {
         const {session} = phalaComputation.workerStopped.v1199.decode(event)
         return {name, args: {sessionId: encodeAddress(session)}}
-      } else {
-        throw error
       }
+      throw error
     }
     case phalaComputation.workerReclaimed.name: {
       if (phalaComputation.workerReclaimed.v1199.is(event)) {
@@ -87,36 +82,32 @@ const decodeEvent = (
             slashed: toBalance(slashed),
           },
         }
-      } else {
-        throw error
       }
+      throw error
     }
     case phalaComputation.workerEnterUnresponsive.name: {
       if (phalaComputation.workerEnterUnresponsive.v1199.is(event)) {
         const {session} =
           phalaComputation.workerEnterUnresponsive.v1199.decode(event)
         return {name, args: {sessionId: encodeAddress(session)}}
-      } else {
-        throw error
       }
+      throw error
     }
     case phalaComputation.workerExitUnresponsive.name: {
       if (phalaComputation.workerExitUnresponsive.v1199.is(event)) {
         const {session} =
           phalaComputation.workerExitUnresponsive.v1199.decode(event)
         return {name, args: {sessionId: encodeAddress(session)}}
-      } else {
-        throw error
       }
+      throw error
     }
     case phalaComputation.benchmarkUpdated.name: {
       if (phalaComputation.benchmarkUpdated.v1199.is(event)) {
         const {session, pInstant} =
           phalaComputation.benchmarkUpdated.v1199.decode(event)
         return {name, args: {sessionId: encodeAddress(session), pInstant}}
-      } else {
-        throw error
       }
+      throw error
     }
     case phalaRegistry.workerAdded.name: {
       if (phalaRegistry.workerAdded.v1260.is(event)) {
@@ -126,16 +117,16 @@ const decodeEvent = (
           name,
           args: {workerId: pubkey, confidenceLevel},
         }
-      } else if (phalaRegistry.workerAdded.v1199.is(event)) {
+      }
+      if (phalaRegistry.workerAdded.v1199.is(event)) {
         const {pubkey, confidenceLevel} =
           phalaRegistry.workerAdded.v1199.decode(event)
         return {
           name,
           args: {workerId: pubkey, confidenceLevel},
         }
-      } else {
-        throw error
       }
+      throw error
     }
     case phalaRegistry.workerUpdated.name: {
       if (phalaRegistry.workerUpdated.v1260.is(event)) {
@@ -145,16 +136,16 @@ const decodeEvent = (
           name,
           args: {workerId: pubkey, confidenceLevel},
         }
-      } else if (phalaRegistry.workerUpdated.v1199.is(event)) {
+      }
+      if (phalaRegistry.workerUpdated.v1199.is(event)) {
         const {pubkey, confidenceLevel} =
           phalaRegistry.workerUpdated.v1199.decode(event)
         return {
           name,
           args: {workerId: pubkey, confidenceLevel},
         }
-      } else {
-        throw error
       }
+      throw error
     }
     case phalaRegistry.initialScoreSet.name: {
       if (phalaRegistry.initialScoreSet.v1182.is(event)) {
@@ -164,15 +155,14 @@ const decodeEvent = (
           name,
           args: {workerId: pubkey, initialScore: initScore},
         }
-      } else {
-        throw error
       }
+      throw error
     }
   }
 }
 
 const decodeEvents = (
-  ctx: Ctx
+  ctx: Ctx,
 ): Array<
   Exclude<ReturnType<typeof decodeEvent>, undefined> & {
     block: SubstrateBlock
